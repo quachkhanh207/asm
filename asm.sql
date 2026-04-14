@@ -1,0 +1,108 @@
+-- =============================================================
+-- PHẦN 1: DỌN DẸP VÀ TẠO MỚI CẤU TRÚC BẢNG (DÀI & ĐẦY ĐỦ)
+-- =============================================================
+
+DROP TABLE IF EXISTS order_items CASCADE;
+DROP TABLE IF EXISTS orderdetails CASCADE;
+DROP TABLE IF EXISTS orders CASCADE;
+DROP TABLE IF EXISTS products CASCADE;
+DROP TABLE IF EXISTS suppliers CASCADE;
+DROP TABLE IF EXISTS customers CASCADE;
+
+
+CREATE TABLE suppliers (
+    supplier_id SERIAL PRIMARY KEY,
+    supplier_name VARCHAR(100) NOT NULL
+);
+
+CREATE TABLE products (
+    product_id SERIAL PRIMARY KEY,
+    product_name VARCHAR(100),
+    price DECIMAL(10, 2),
+    supplier_id INT REFERENCES suppliers(supplier_id)
+);
+
+CREATE TABLE customers (
+    customer_id SERIAL PRIMARY KEY,
+    full_name VARCHAR(100)
+);
+
+CREATE TABLE orders (
+    order_id SERIAL PRIMARY KEY,
+    customer_id INT REFERENCES customers(customer_id),
+    order_date DATE
+);
+g
+CREATE TABLE order_items (
+    order_id INT REFERENCES orders(order_id),
+    product_id INT REFERENCES products(product_id),
+    quantity INT,
+    price DECIMAL(10, 2)
+);
+
+-- =============================================================
+-- PHẦN 2: CHÈN DỮ LIỆU MẪU (ĐỂ CHẠY ĐƯỢC KẾT QUẢ LAB 6)
+-- =============================================================
+
+INSERT INTO suppliers (supplier_name) VALUES 
+('Công ty Điện máy xanh'), ('Tập đoàn Samsung'), ('Nhà sách Fahasa'), ('Siêu thị WinMart');
+
+INSERT INTO products (product_name, price, supplier_id) VALUES 
+('Laptop Dell', 15000.00, 1), ('Chuột không dây', 500.00, 1), 
+('Điện thoại S24', 25000.00, 2), ('Tai nghe Buds', 3000.00, 2),
+('Sách SQL cơ bản', 150.00, 3), ('Bút bi Thiên Long', 5.00, 3),
+('Sữa tươi', 30.00, 4), ('Gạo ST25', 200.00, 4);
+
+INSERT INTO customers (full_name) VALUES 
+('Nguyễn Văn Tuấn'), ('Trần Thị Lan'), ('Lê Minh Duy'), ('Phạm Hoàng Tiến');
+
+INSERT INTO orders (customer_id, order_date) VALUES 
+(1, '2025-10-15'), (2, '2025-10-20'), 
+(3, '2025-09-05'), (1, '2025-11-12'),
+(4, '2025-10-25');
+
+INSERT INTO order_items (order_id, product_id, quantity, price) VALUES 
+(1, 1, 10, 15000.00), -- Đơn của Tuấn
+(2, 3, 2, 25000.00),  -- Đơn của Lan
+(3, 5, 10, 150.00),   -- Đơn của Duy
+(5, 3, 5, 25000.00);  -- Đơn của Tiến
+
+-- =============================================================
+-- PHẦN 3: ĐÁP ÁN TRUY VẤN LAB 6 (KẾT QUẢ HIỂN THỊ DƯỚI ĐÂY)
+-- =============================================================
+
+-- Bài 1: Tổng quan thống kê sản phẩm
+SELECT 
+    COUNT(*) AS SoLuongSanPham,
+    AVG(price) AS GiaTrungBinh,
+    MIN(price) AS GiaReNhat,
+    MAX(price) AS GiaDatNhat
+FROM products;
+
+-- Bài 2: Phân tích nhà cung cấp có > 1 sản phẩm
+SELECT 
+    s.supplier_name, 
+    COUNT(p.product_id) AS TongSoSanPham
+FROM suppliers s
+JOIN products p ON s.supplier_id = p.supplier_id
+GROUP BY s.supplier_name
+HAVING COUNT(p.product_id) > 1;
+
+-- Bài 3: Đơn hàng tháng 10/2025 (Định dạng VN)
+SELECT 
+    order_id, 
+    TO_CHAR(order_date, 'DD/MM/YYYY') AS NgayDatHang
+FROM orders
+WHERE EXTRACT(YEAR FROM order_date) = 2025 
+  AND EXTRACT(MONTH FROM order_date) = 10;
+
+-- Bài 4: Khách hàng VIP chi tiêu > 100,000đ
+SELECT 
+    c.full_name, 
+    SUM(oi.quantity * oi.price) AS TongTienChiTieu
+FROM customers c
+JOIN orders o ON c.customer_id = o.customer_id
+JOIN order_items oi ON o.order_id = oi.order_id
+GROUP BY c.full_name
+HAVING SUM(oi.quantity * oi.price) > 100000
+ORDER BY TongTienChiTieu DESC;
